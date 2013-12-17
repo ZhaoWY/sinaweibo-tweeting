@@ -1,45 +1,57 @@
 # -*- coding: utf-8 -*-
 
-import json
-import time
-import urllib
+import json#导入一个json模块
+import time#导入一个time模块
+import urllib#导入一个urllib模块
 
 
-import requests
+import requests#导入requests模块,相比于官方的版本，代码更为简洁
 
-class Client(object):
+
+class Client(object):#定义了一个Client类
     def __init__(self, api_key, api_secret, redirect_uri, token=None):
+        #每个定义的类都有一个特殊的方法，名为__init__(),可以通过这个方法控制如何初始化对象
+
+        #token令牌，每一个方法的第一个参数为调用对象实例，self参数可以帮助标识要处理的哪个对象实例的数据
+
+        #常量定义
         self.site = 'https://api.weibo.com/'
         self.authorization_url = self.site + 'oauth2/authorize'
         self.token_url = self.site + 'oauth2/access_token'
         self.api_url = self.site + '2/'
+        #定义基本信息
         self.client_id = api_key
         self.client_secret = api_secret
-        self.redirect_uri = redirect_uri 
+        self.redirect_uri = redirect_uri #回调地址
+
         self.session = requests.session()
+        #如果给了token,利用set_token方法直接运行实例
         if token:
             self.set_token(token)
     @property
     
+    #@property: 可以将python定义的函数“当做”属性访问，从而提供更加友好访问方式
     
     def authorize_url(self):
-        
+        #由api_key, redirect-uri得到一个授权url
+        #授权url由authorization_url+?+urllib.urlencode(params)组成
         params = {
-            'client_id': self.client_id,
-            'redirect_uri': self.redirect_uri
+            'client_id': self.client_id,#api_key
+            'redirect_uri': self.redirect_uri#回调地址
         }
         return "{0}?{1}".format(
             self.authorization_url, urllib.urlencode(params))
     
     @property
 
-    def alive(self):
-        if self.expires_at:
+    def alive(self):#判断实例的expires_at是否大于当前系统的时间
+        if self.expires_at:#expires有效期
             return self.expires_at > time.time()
         else:
             return False
 
     def set_code(self, authorization_code):
+        #通过授权code运行实例
         """Activate client by authorization_code.
         """
         params = {
@@ -49,13 +61,15 @@ class Client(object):
             'code': authorization_code,
             'redirect_uri': self.redirect_uri
         }
-        res = requests.post(self.token_url, data=params)
-        token = json.loads(res.text)
-        self._assert_error(token)
-        token[u'expires_at'] = int(time.time()) + int(token.pop(u'expires_in'))
-        self.set_token(token)
+        res = requests.post(self.token_url, data=params)#根据params字典利用requests模板中的post方法得到res.text文件
+        token = json.loads(res.text)#将json数据转换成python能理解的格式
+        self._assert_error(token)#调用_assert_error方法，判断是否出现RuntimeError
+
+        token[u'expires_at'] = int(time.time()) + int(token.pop(u'expires_in'))#得到token
+        self.set_token(token)#得到token后调用set_token 运行实例
 
     def set_token(self, token):
+        #利用已知的token直接运行实例
         """Directly activate client by access_token.
         """
         self.token = token
@@ -66,7 +80,7 @@ class Client(object):
 
         self.session.params = {'access_token': self.access_token}
 
-    def _assert_error(self, d):
+    def _assert_error(self, d):#根据d中是否有’error_code'或者'error',判断是否出现RuntimeError
         """Assert if json response is error.
         """
         if 'error_code' in d and 'error' in d:
@@ -74,9 +88,10 @@ class Client(object):
                 d.get("error_code", ""), d.get("error", "")))
 
 
-    def get(self, uri, **kwargs):   
+    def get(self, uri, **kwargs):   #**用来处理传递任意个有名字的参数，这些参数用dict来访问。
         """Request resource by get method.
         """
+        #用get的方法从url获取资源并返回
         url = "{0}{1}.json".format(self.api_url, uri)
         res = json.loads(self.session.get(url, params=kwargs).text)
         self._assert_error(res)
@@ -85,6 +100,8 @@ class Client(object):
     def post(self, uri, **kwargs):
         """Request resource by post method.
         """
+        
+        #用post的方法从url获取资源并返回
         url = "{0}{1}.json".format(self.api_url, uri)
         if "pic" not in kwargs:
             res = json.loads(self.session.post(url, data=kwargs).text)
@@ -97,14 +114,15 @@ class Client(object):
         return res
 def main():
     try:
+       #step 1 定义 app key，app secret，回调地址：
         APP_KEY = "2881424215"
         APP_SECRET = "6f8c27a7ba9fd929b6fe6a4c49b62945"
         CALLBACK_URL = 'http://open.weibo.com/apps/2881424215/info/advanced'
-        client = Client(api_key=APP_KEY, api_secret=APP_SECRET, redirect_uri=CALLBACK_URL)
-        print client.authorize_url
-        
-        client.set_code(raw_input('Input CODE:'))
-        client.get('users/show',uid=3201407611)
+        #step 2 引导用户到授权地址
+        client = Client(api_key=APP_KEY, api_secret=APP_SECRET, redirect_uri=CALLBACK_URL)#定义了Client类的client
+        print client.authorize_url#打印出授权url
+        client.set_code(raw_input('Input CODE:'))#得到code并提示输入code
+        client.get('users/show',uid=3201407611)#3310398932 3201407611
         client.post('statuses/update', status='python sdk test,测试Python + OAuth 2.0发微博')
     except Exception as pyOauth2Error:
         print pyOauth2Error
