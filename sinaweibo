@@ -121,9 +121,14 @@ def main():
         #step 2 引导用户到授权地址
         client = Client(api_key=APP_KEY, api_secret=APP_SECRET, redirect_uri=CALLBACK_URL)#定义了Client类的client
         print client.authorize_url#打印出授权url
+        
         client.set_code(raw_input('Input CODE:'))#得到code并提示输入code
         client.get('users/show',uid=3201407611)#3310398932 3201407611
         client.post('statuses/update', status='python sdk test,测试Python + OAuth 2.0发微博')
+        time.sleep(2)
+        f = open('picture.jpg','rb')#以二进制读取模式打开
+
+        client.post('statuses/upload', status='测试程序-发图片', pic=f)#用post方法上传图片
     except Exception as pyOauth2Error:
         print pyOauth2Error
 
